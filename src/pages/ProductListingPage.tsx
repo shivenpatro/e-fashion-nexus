@@ -3,8 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/ProductCardSkeleton';
-import { ChevronDown, Filter, X } from 'lucide-react';
+import { ChevronDown, Filter, X, SlidersHorizontal } from 'lucide-react';
 import { useProducts, type Product } from '@/hooks/useProducts';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 // Sort options
 const sortOptions = [
@@ -43,14 +45,13 @@ const ProductListingPage = () => {
       p => p.price >= priceRange[0] && p.price <= priceRange[1]
     );
     
-    // Filter by selected colors - Note: in a real app, you'd need to fetch the variants
-    // and check their colors, but here we'll simplify
+    // Filter by selected colors
     if (selectedColors.length > 0) {
-      // This is simplified - in real app you'd need to check product variants
       filteredProducts = filteredProducts.filter(product => {
-        // For demo purposes - in real implementation, check variants
-        return selectedColors.some(color => 
-          product.id.includes(color) // Just a placeholder logic
+        if (!product.variants || product.variants.length === 0) return false;
+        
+        return product.variants.some(variant => 
+          variant.color && selectedColors.includes(variant.color)
         );
       });
     }
@@ -96,38 +97,31 @@ const ProductListingPage = () => {
     return category.charAt(0).toUpperCase() + category.slice(1);
   };
 
-  if (isLoading) {
-    return <div className="container-custom py-8 text-center">Loading products...</div>;
-  }
-
-  if (error) {
-    return <div className="container-custom py-8 text-center">Error loading products. Please try again.</div>;
-  }
-  
   return (
     <div className="container-custom py-8">
       <h1 className="text-3xl font-semibold mb-8">{getPageTitle()}</h1>
       
       {/* Mobile filter button */}
       <div className="md:hidden mb-6">
-        <button 
-          className="btn-outline inline-flex items-center"
+        <Button 
+          variant="outline"
+          className="inline-flex items-center"
           onClick={() => setShowMobileFilters(true)}
         >
-          <Filter size={18} className="mr-2" /> Filters
-        </button>
+          <SlidersHorizontal size={18} className="mr-2" /> Filters
+        </Button>
       </div>
       
       <div className="flex flex-col md:flex-row gap-6">
         {/* Filters - Desktop */}
         <div className="hidden md:block w-64 shrink-0">
-          <div className="border border-gray-200 rounded-md p-4">
-            <h3 className="font-semibold mb-4">Filters</h3>
+          <div className="border border-gray-200 rounded-md p-5 shadow-sm bg-white">
+            <h3 className="font-semibold mb-5 text-lg">Filters</h3>
             
             {/* Price Range */}
             <div className="mb-6">
-              <h4 className="font-medium mb-2">Price Range</h4>
-              <div className="flex justify-between mb-2">
+              <h4 className="font-medium mb-3 text-sm">Price Range</h4>
+              <div className="flex justify-between mb-2 text-sm">
                 <span>${priceRange[0]}</span>
                 <span>${priceRange[1]}</span>
               </div>
@@ -137,20 +131,20 @@ const ProductListingPage = () => {
                 max="200"
                 value={priceRange[1]}
                 onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                className="w-full"
+                className="w-full accent-fashion-accent"
               />
             </div>
             
             {/* Colors */}
             <div>
-              <h4 className="font-medium mb-2">Colors</h4>
+              <h4 className="font-medium mb-3 text-sm">Colors</h4>
               <div className="flex flex-wrap gap-2">
                 {colorOptions.map(color => (
                   <button
                     key={color.value}
-                    className={`w-6 h-6 rounded-full border ${
+                    className={`w-8 h-8 rounded-full border ${
                       selectedColors.includes(color.value) ? 'ring-2 ring-fashion-accent' : 'ring-1 ring-gray-300'
-                    }`}
+                    } transition-all`}
                     style={{ backgroundColor: color.value }}
                     onClick={() => toggleColorSelection(color.value)}
                     aria-label={`Filter by color ${color.label}`}
@@ -164,12 +158,12 @@ const ProductListingPage = () => {
         {/* Mobile Filters Sidebar */}
         {showMobileFilters && (
           <div className="fixed inset-0 z-50 bg-black bg-opacity-50 md:hidden">
-            <div className="h-full w-80 max-w-full bg-white p-4 ml-auto animate-fade-in">
+            <div className="h-full w-80 max-w-full bg-white p-5 ml-auto animate-fade-in">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="font-semibold">Filters</h3>
+                <h3 className="font-semibold text-lg">Filters</h3>
                 <button 
                   onClick={() => setShowMobileFilters(false)}
-                  className="text-fashion-gray-800"
+                  className="text-fashion-gray-800 hover:text-fashion-gray-900"
                 >
                   <X size={20} />
                 </button>
@@ -177,8 +171,8 @@ const ProductListingPage = () => {
               
               {/* Price Range */}
               <div className="mb-6">
-                <h4 className="font-medium mb-2">Price Range</h4>
-                <div className="flex justify-between mb-2">
+                <h4 className="font-medium mb-3 text-sm">Price Range</h4>
+                <div className="flex justify-between mb-2 text-sm">
                   <span>${priceRange[0]}</span>
                   <span>${priceRange[1]}</span>
                 </div>
@@ -188,34 +182,36 @@ const ProductListingPage = () => {
                   max="200"
                   value={priceRange[1]}
                   onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                  className="w-full"
+                  className="w-full accent-fashion-accent"
                 />
               </div>
               
               {/* Colors */}
               <div className="mb-6">
-                <h4 className="font-medium mb-2">Colors</h4>
-                <div className="flex flex-wrap gap-2">
+                <h4 className="font-medium mb-3 text-sm">Colors</h4>
+                <div className="flex flex-wrap gap-3">
                   {colorOptions.map(color => (
-                    <button
-                      key={color.value}
-                      className={`w-6 h-6 rounded-full border ${
-                        selectedColors.includes(color.value) ? 'ring-2 ring-fashion-accent' : 'ring-1 ring-gray-300'
-                      }`}
-                      style={{ backgroundColor: color.value }}
-                      onClick={() => toggleColorSelection(color.value)}
-                      aria-label={`Filter by color ${color.label}`}
-                    />
+                    <div key={color.value} className="flex flex-col items-center">
+                      <button
+                        className={`w-8 h-8 rounded-full border mb-1 ${
+                          selectedColors.includes(color.value) ? 'ring-2 ring-fashion-accent' : 'ring-1 ring-gray-300'
+                        }`}
+                        style={{ backgroundColor: color.value }}
+                        onClick={() => toggleColorSelection(color.value)}
+                        aria-label={`Filter by color ${color.label}`}
+                      />
+                      <span className="text-xs">{color.label}</span>
+                    </div>
                   ))}
                 </div>
               </div>
               
-              <button 
-                className="btn-primary w-full mt-4"
+              <Button 
+                className="w-full mt-4"
                 onClick={() => setShowMobileFilters(false)}
               >
                 Apply Filters
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -227,7 +223,7 @@ const ProductListingPage = () => {
             <p className="text-fashion-gray-800">{products.length} products</p>
             
             <div className="relative">
-              <div className="inline-flex items-center gap-2 border border-gray-200 rounded-md px-3 py-2">
+              <div className="inline-flex items-center gap-2 border border-gray-200 rounded-md px-3 py-2 bg-white shadow-sm">
                 <span className="text-sm">Sort by:</span>
                 <select 
                   value={selectedSort}
@@ -246,30 +242,30 @@ const ProductListingPage = () => {
           </div>
           
           {/* Product grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {isLoading ? (
               Array.from({ length: 8 }).map((_, index) => (
                 <ProductCardSkeleton key={index} />
               ))
             ) : error ? (
               <div className="col-span-full text-center py-8">
-                <p className="text-fashion-gray-800">Failed to load products. Please try again.</p>
-                <button 
+                <p className="text-fashion-gray-800 mb-4">Failed to load products. Please try again.</p>
+                <Button 
                   onClick={() => refetch()}
-                  className="btn-primary mt-4"
+                  variant="default"
                 >
                   Retry
-                </button>
+                </Button>
               </div>
             ) : products.length === 0 ? (
               <div className="col-span-full text-center py-8">
-                <p className="text-fashion-gray-800">No products match your filter criteria.</p>
-                <button 
+                <p className="text-fashion-gray-800 mb-4">No products match your filter criteria.</p>
+                <Button 
                   onClick={clearFilters}
-                  className="btn-primary mt-4"
+                  variant="default"
                 >
                   Clear Filters
-                </button>
+                </Button>
               </div>
             ) : (
               products.map(product => (
@@ -279,7 +275,7 @@ const ProductListingPage = () => {
                   name={product.name}
                   price={product.price}
                   image={product.image_urls[0]}
-                  colors={product.variants?.map(v => v.color as string).filter(Boolean) || []}
+                  colors={product.variants?.filter(v => v.color !== null).map(v => v.color as string) || []}
                 />
               ))
             )}
