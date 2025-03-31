@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { User, ShoppingBag, Heart, CreditCard, Settings, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
-import { Avatar, AvatarImage, AvatarFallback } from '@nextui-org/react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 // Mock order data
 const orders = [
