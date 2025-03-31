@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import ProductCard from '@/components/ProductCard';
@@ -15,7 +16,7 @@ const sortOptions = [
 
 const ProductListingPage = () => {
   const { category } = useParams<{ category?: string }>();
-  const { data: allProducts, isLoading, error } = useProducts(category);
+  const { data: allProducts, isLoading, error, refetch } = useProducts(category);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedSort, setSelectedSort] = useState('recommended');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 200]);
@@ -80,6 +81,13 @@ const ProductListingPage = () => {
     } else {
       setSelectedColors([...selectedColors, color]);
     }
+  };
+  
+  // Clear all filters
+  const clearFilters = () => {
+    setPriceRange([0, 200]);
+    setSelectedColors([]);
+    setSelectedSort('recommended');
   };
   
   // Title based on category
@@ -253,7 +261,7 @@ const ProductListingPage = () => {
                   Retry
                 </button>
               </div>
-            ) : filteredProducts.length === 0 ? (
+            ) : products.length === 0 ? (
               <div className="col-span-full text-center py-8">
                 <p className="text-fashion-gray-800">No products match your filter criteria.</p>
                 <button 
@@ -264,14 +272,14 @@ const ProductListingPage = () => {
                 </button>
               </div>
             ) : (
-              filteredProducts.map(product => (
+              products.map(product => (
                 <ProductCard
                   key={product.id}
                   id={product.id}
                   name={product.name}
                   price={product.price}
                   image={product.image_urls[0]}
-                  colors={product.variants?.map(v => v.color) || []}
+                  colors={product.variants?.map(v => v.color as string).filter(Boolean) || []}
                 />
               ))
             )}

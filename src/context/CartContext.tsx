@@ -9,6 +9,7 @@ type CartItem = {
   size: string;
   color: string;
   quantity: number;
+  variant_id?: string; // Added to support ProductDetailPage
 };
 
 type CartContextType = {

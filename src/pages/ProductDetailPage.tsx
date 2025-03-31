@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
@@ -9,7 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 
 const ProductDetailPage = () => {
   const { productId } = useParams<{ productId: string }>();
-  const { data: product, isLoading, error } = useProductDetails(productId || '');
+  const { data: product, isLoading, error: productError } = useProductDetails(productId || '');
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -19,8 +20,8 @@ const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [mainImage, setMainImage] = useState('');
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
-  const [productVariants, setProductVariants] = useState([]);
-  const [error, setError] = useState('');
+  const [productVariants, setProductVariants] = useState<any[]>([]);
+  const [validationError, setValidationError] = useState('');
 
   useEffect(() => {
     if (product) {
@@ -88,21 +89,21 @@ const ProductDetailPage = () => {
   
   const handleAddToCart = () => {
     if (!selectedSize) {
-      setError('Please select a size');
+      setValidationError('Please select a size');
       return;
     }
     
     if (!selectedColor) {
-      setError('Please select a color');
+      setValidationError('Please select a color');
       return;
     }
     
-    const selectedVariant = productVariants.find(
-      variant => variant.size === selectedSize && variant.color === selectedColor
+    const variant = productVariants.find(
+      v => v.size === selectedSize && v.color === selectedColor
     );
     
-    if (!selectedVariant) {
-      setError('Selected combination is not available');
+    if (!variant) {
+      setValidationError('Selected combination is not available');
       return;
     }
     
@@ -113,7 +114,7 @@ const ProductDetailPage = () => {
       price: product.price,
       name: product.name,
       image: product.image_urls[0],
-      product_variant_id: selectedVariant.id,
+      variant_id: variant.id,
       quantity: quantity
     });
     
@@ -132,7 +133,7 @@ const ProductDetailPage = () => {
     );
   }
   
-  if (error || !product) {
+  if (productError || !product) {
     return (
       <div className="container-custom py-12 text-center">
         <h1 className="text-2xl font-semibold mb-4">Product Not Found</h1>
@@ -186,6 +187,12 @@ const ProductDetailPage = () => {
         <div>
           <h1 className="text-2xl font-semibold mb-2">{product.name}</h1>
           <p className="text-xl mb-4">${product.price.toFixed(2)}</p>
+          
+          {validationError && (
+            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md">
+              {validationError}
+            </div>
+          )}
           
           <div className="mb-6">
             <h3 className="text-sm font-medium mb-2">
