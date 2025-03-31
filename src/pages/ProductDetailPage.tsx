@@ -1,80 +1,123 @@
 
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
-import { ShoppingBag, Heart, TruckIcon, Undo2, Info } from 'lucide-react';
+import { ShoppingBag, Heart, TruckIcon, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-
-// Mock product data
-const products = [
-  {
-    id: '1',
-    name: 'Premium Cotton T-Shirt',
-    price: 39.99,
-    images: [
-      'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1562157873-818bc0726f68?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
-    ],
-    colors: [
-      { name: 'Black', value: '#000000' },
-      { name: 'White', value: '#FFFFFF' },
-      { name: 'Gray', value: '#C4C4C4' }
-    ],
-    sizes: ['S', 'M', 'L', 'XL'],
-    description: 'Our Premium Cotton T-Shirt is crafted from high-quality, 100% organic cotton for exceptional comfort and durability. The classic fit and versatile design make it perfect for everyday wear, while the breathable fabric ensures all-day comfort. The t-shirt features a ribbed crew neck that maintains its shape, reinforced seams for added strength, and a straight hemline for a clean, polished look.',
-    details: [
-      'Material: 100% Organic Cotton',
-      'Weight: 180 GSM',
-      'Care: Machine wash cold, tumble dry low',
-      'Made in Portugal'
-    ],
-    category: 'men',
-    subcategory: 'tops'
-  },
-  {
-    id: '2',
-    name: 'Slim Fit Jeans',
-    price: 59.99,
-    images: [
-      'https://images.unsplash.com/photo-1542272604-787c3835535d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1582552938357-32b906df40cb?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1598554747436-c9293d6a588f?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
-    ],
-    colors: [
-      { name: 'Black', value: '#000000' },
-      { name: 'Blue', value: '#3B5998' },
-      { name: 'Dark Blue', value: '#1F2937' }
-    ],
-    sizes: ['30', '32', '34', '36', '38'],
-    description: 'These Slim Fit Jeans offer modern style with a comfortable fit. Made from premium denim with just the right amount of stretch, they provide both comfort and durability. The slim fit design sits below the waist and is slim through the hip and thigh with a narrow leg opening for a sleek silhouette. Perfect for casual everyday wear or dressed up for a night out.',
-    details: [
-      'Material: 98% Cotton, 2% Elastane',
-      'Weight: Medium-weight denim',
-      'Care: Machine wash cold, inside out',
-      'Made in Turkey'
-    ],
-    category: 'men',
-    subcategory: 'bottoms'
-  }
-];
+import { useProductDetails } from '@/hooks/useProducts';
+import { useAuth } from '@/context/AuthContext';
 
 const ProductDetailPage = () => {
   const { productId } = useParams<{ productId: string }>();
+  const { data: product, isLoading, error } = useProductDetails(productId || '');
   const { addToCart } = useCart();
-  
-  // Find the product based on the ID from URL params
-  const product = products.find(p => p.id === productId);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   
   // State for selected options and quantity
-  const [selectedColor, setSelectedColor] = useState(product?.colors[0].value || '');
-  const [selectedSize, setSelectedSize] = useState(product?.sizes[0] || '');
+  const [selectedColor, setSelectedColor] = useState('');
+  const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [mainImage, setMainImage] = useState(product?.images[0] || '');
+  const [mainImage, setMainImage] = useState('');
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
+  
+  // Set default values when product loads
+  useEffect(() => {
+    if (product) {
+      setMainImage(product.image_urls[0] || '');
+      
+      // Set default variant if available
+      if (product.variants && product.variants.length > 0) {
+        // Group variants by color
+        const colorMap = new Map();
+        product.variants.forEach(variant => {
+          if (variant.color) {
+            if (!colorMap.has(variant.color)) {
+              colorMap.set(variant.color, []);
+            }
+            colorMap.get(variant.color).push(variant);
+          }
+        });
+        
+        // Set first color
+        if (colorMap.size > 0) {
+          const firstColor = Array.from(colorMap.keys())[0];
+          setSelectedColor(firstColor);
+          
+          // Set first size for this color
+          const sizes = colorMap.get(firstColor);
+          if (sizes && sizes.length > 0) {
+            setSelectedSize(sizes[0].size || '');
+            setSelectedVariant(sizes[0].id);
+          }
+        }
+      }
+    }
+  }, [product]);
+  
+  // Update selected variant when color or size changes
+  useEffect(() => {
+    if (product?.variants) {
+      const variant = product.variants.find(
+        v => v.color === selectedColor && v.size === selectedSize
+      );
+      setSelectedVariant(variant ? variant.id : null);
+    }
+  }, [selectedColor, selectedSize, product]);
+  
+  // Get available sizes for the selected color
+  const getAvailableSizes = () => {
+    if (!product?.variants) return [];
+    
+    return product.variants
+      .filter(v => v.color === selectedColor)
+      .map(v => v.size)
+      .filter((size): size is string => !!size); // Filter out null sizes
+  };
+  
+  // Get available colors
+  const getAvailableColors = () => {
+    if (!product?.variants) return [];
+    
+    const colors = new Set<string>();
+    product.variants.forEach(v => {
+      if (v.color) colors.add(v.color);
+    });
+    
+    return Array.from(colors);
+  };
+  
+  // Handle add to cart
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to add items to your cart');
+      navigate('/login', { state: { from: `/product/${productId}` } });
+      return;
+    }
+    
+    if (!selectedVariant) {
+      toast.error('Please select a size and color');
+      return;
+    }
+    
+    addToCart({
+      productVariantId: selectedVariant,
+      quantity
+    });
+  };
+  
+  // If loading or error
+  if (isLoading) {
+    return (
+      <div className="container-custom py-12 text-center">
+        <p className="text-lg">Loading product details...</p>
+      </div>
+    );
+  }
   
   // If product not found
-  if (!product) {
+  if (error || !product) {
     return (
       <div className="container-custom py-12 text-center">
         <h1 className="text-2xl font-semibold mb-4">Product Not Found</h1>
@@ -85,26 +128,6 @@ const ProductDetailPage = () => {
       </div>
     );
   }
-  
-  // Handle add to cart
-  const handleAddToCart = () => {
-    // Find the color name based on selected value
-    const colorObj = product.colors.find(c => c.value === selectedColor);
-    const colorName = colorObj ? colorObj.name : '';
-    
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.images[0],
-      size: selectedSize,
-      color: colorName
-    });
-    
-    toast.success('Added to cart', {
-      description: `${product.name} - ${colorName}, Size ${selectedSize}`
-    });
-  };
   
   return (
     <div className="container-custom py-8">
@@ -131,7 +154,7 @@ const ProductDetailPage = () => {
           </div>
           
           <div className="flex space-x-4">
-            {product.images.map((image, index) => (
+            {product.image_urls.map((image, index) => (
               <button 
                 key={index}
                 className={`w-20 h-20 overflow-hidden rounded-md ${mainImage === image ? 'ring-2 ring-accent' : 'ring-1 ring-gray-200'}`}
@@ -154,15 +177,17 @@ const ProductDetailPage = () => {
           
           {/* Color Selection */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium mb-2">Color: {product.colors.find(c => c.value === selectedColor)?.name}</h3>
+            <h3 className="text-sm font-medium mb-2">
+              Color: {selectedColor}
+            </h3>
             <div className="flex space-x-2">
-              {product.colors.map(color => (
+              {getAvailableColors().map(color => (
                 <button
-                  key={color.value}
-                  className={`w-8 h-8 rounded-full ${selectedColor === color.value ? 'ring-2 ring-accent' : 'ring-1 ring-gray-300'}`}
-                  style={{ backgroundColor: color.value }}
-                  onClick={() => setSelectedColor(color.value)}
-                  aria-label={`Select color ${color.name}`}
+                  key={color}
+                  className={`w-8 h-8 rounded-full ${selectedColor === color ? 'ring-2 ring-accent' : 'ring-1 ring-gray-300'}`}
+                  style={{ backgroundColor: color.toLowerCase() }}
+                  onClick={() => setSelectedColor(color)}
+                  aria-label={`Select color ${color}`}
                 />
               ))}
             </div>
@@ -175,7 +200,7 @@ const ProductDetailPage = () => {
               <button className="text-xs text-fashion-gray-800 underline">Size Guide</button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {product.sizes.map(size => (
+              {getAvailableSizes().map(size => (
                 <button
                   key={size}
                   className={`min-w-[3rem] h-10 border rounded-md flex items-center justify-center transition-colors ${
@@ -217,6 +242,7 @@ const ProductDetailPage = () => {
             <Button
               onClick={handleAddToCart}
               className="flex-grow bg-fashion-gray-900 text-white hover:bg-fashion-gray-800"
+              disabled={!selectedVariant}
             >
               <ShoppingBag className="mr-2 h-4 w-4" />
               Add to Cart
@@ -255,12 +281,7 @@ const ProductDetailPage = () => {
           <h2 className="text-xl font-semibold mb-4">Description</h2>
           <p className="text-fashion-gray-800 mb-8">{product.description}</p>
           
-          <h2 className="text-xl font-semibold mb-4">Product Details</h2>
-          <ul className="list-disc pl-5 text-fashion-gray-800 space-y-2">
-            {product.details.map((detail, index) => (
-              <li key={index}>{detail}</li>
-            ))}
-          </ul>
+          {/* Additional details would go here */}
         </div>
       </div>
     </div>

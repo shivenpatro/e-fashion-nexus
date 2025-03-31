@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   
   // Get redirect path from location state or default to home
   const redirectPath = location.state?.from || '/';
@@ -16,6 +16,13 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(redirectPath);
+    }
+  }, [isAuthenticated, navigate, redirectPath]);
   
   // Form validation
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -32,11 +39,10 @@ const LoginPage = () => {
     setIsLoading(true);
     
     try {
-      await login(email, password);
-      toast.success('Login successful!');
-      navigate(redirectPath);
-    } catch (error) {
-      toast.error('Login failed. Please check your credentials.');
+      const success = await login(email, password);
+      if (success) {
+        navigate(redirectPath);
+      }
     } finally {
       setIsLoading(false);
     }
