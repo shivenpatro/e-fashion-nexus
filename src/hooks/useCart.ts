@@ -60,9 +60,9 @@ export const useCart = () => {
         .from('cart_items')
         .select(`
           *,
-          product_variants(
+          product_variants:product_variant_id(
             *,
-            products(*)
+            products:product_id(*)
           )
         `)
         .eq('cart_id', cart.id);
@@ -95,6 +95,9 @@ export const useCart = () => {
       }
 
       const cart = await getCart();
+      if (!cart) {
+        throw new Error("Failed to get or create cart");
+      }
       
       // Check if item already exists in cart
       const { data: existingItems } = await supabase

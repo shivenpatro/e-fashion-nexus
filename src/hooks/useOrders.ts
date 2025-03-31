@@ -81,10 +81,12 @@ export const useOrders = () => {
 
         if (itemsError) throw itemsError;
 
-        return {
+        const result = {
           ...order,
-          items
+          items: items
         } as Order;
+        
+        return result;
       },
       enabled: isAuthenticated && !!orderId
     });
@@ -122,6 +124,7 @@ export const useOrders = () => {
         .single();
 
       if (orderError) throw orderError;
+      if (!order) throw new Error("Failed to create order");
 
       // Insert order items
       const orderItems = cartItems.map(item => ({

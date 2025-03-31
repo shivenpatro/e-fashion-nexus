@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import ProductCard from '@/components/ProductCard';
+import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import { ChevronDown, Filter, X } from 'lucide-react';
 import { useProducts, type Product } from '@/hooks/useProducts';
 
@@ -237,26 +238,44 @@ const ProductListingPage = () => {
           </div>
           
           {/* Product grid */}
-          {products.length > 0 ? (
-            <div className="product-grid">
-              {products.map(product => (
-                <ProductCard 
-                  key={product.id} 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {isLoading ? (
+              Array.from({ length: 8 }).map((_, index) => (
+                <ProductCardSkeleton key={index} />
+              ))
+            ) : error ? (
+              <div className="col-span-full text-center py-8">
+                <p className="text-fashion-gray-800">Failed to load products. Please try again.</p>
+                <button 
+                  onClick={() => refetch()}
+                  className="btn-primary mt-4"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="col-span-full text-center py-8">
+                <p className="text-fashion-gray-800">No products match your filter criteria.</p>
+                <button 
+                  onClick={clearFilters}
+                  className="btn-primary mt-4"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              filteredProducts.map(product => (
+                <ProductCard
+                  key={product.id}
                   id={product.id}
                   name={product.name}
                   price={product.price}
                   image={product.image_urls[0]}
-                  colors={[]} // In a real app, you'd get these from product variants
-                  category={product.category}
-                  subcategory={product.subcategory || ''}
+                  colors={product.variants?.map(v => v.color) || []}
                 />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-fashion-gray-800">No products found matching your criteria.</p>
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

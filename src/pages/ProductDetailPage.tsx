@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
@@ -15,21 +14,19 @@ const ProductDetailPage = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
-  // State for selected options and quantity
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [mainImage, setMainImage] = useState('');
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
-  
-  // Set default values when product loads
+  const [productVariants, setProductVariants] = useState([]);
+  const [error, setError] = useState('');
+
   useEffect(() => {
     if (product) {
       setMainImage(product.image_urls[0] || '');
       
-      // Set default variant if available
       if (product.variants && product.variants.length > 0) {
-        // Group variants by color
         const colorMap = new Map();
         product.variants.forEach(variant => {
           if (variant.color) {
@@ -40,12 +37,10 @@ const ProductDetailPage = () => {
           }
         });
         
-        // Set first color
         if (colorMap.size > 0) {
           const firstColor = Array.from(colorMap.keys())[0];
           setSelectedColor(firstColor);
           
-          // Set first size for this color
           const sizes = colorMap.get(firstColor);
           if (sizes && sizes.length > 0) {
             setSelectedSize(sizes[0].size || '');
@@ -56,7 +51,12 @@ const ProductDetailPage = () => {
     }
   }, [product]);
   
-  // Update selected variant when color or size changes
+  useEffect(() => {
+    if (product?.variants) {
+      setProductVariants(product.variants);
+    }
+  }, [product]);
+  
   useEffect(() => {
     if (product?.variants) {
       const variant = product.variants.find(
@@ -66,17 +66,15 @@ const ProductDetailPage = () => {
     }
   }, [selectedColor, selectedSize, product]);
   
-  // Get available sizes for the selected color
   const getAvailableSizes = () => {
     if (!product?.variants) return [];
     
     return product.variants
       .filter(v => v.color === selectedColor)
       .map(v => v.size)
-      .filter((size): size is string => !!size); // Filter out null sizes
+      .filter((size): size is string => !!size);
   };
   
-  // Get available colors
   const getAvailableColors = () => {
     if (!product?.variants) return [];
     
@@ -88,26 +86,44 @@ const ProductDetailPage = () => {
     return Array.from(colors);
   };
   
-  // Handle add to cart
   const handleAddToCart = () => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to add items to your cart');
-      navigate('/login', { state: { from: `/product/${productId}` } });
+    if (!selectedSize) {
+      setError('Please select a size');
       return;
     }
     
+    if (!selectedColor) {
+      setError('Please select a color');
+      return;
+    }
+    
+    const selectedVariant = productVariants.find(
+      variant => variant.size === selectedSize && variant.color === selectedColor
+    );
+    
     if (!selectedVariant) {
-      toast.error('Please select a size and color');
+      setError('Selected combination is not available');
       return;
     }
     
     addToCart({
-      productVariantId: selectedVariant,
-      quantity
+      id: product.id,
+      size: selectedSize,
+      color: selectedColor,
+      price: product.price,
+      name: product.name,
+      image: product.image_urls[0],
+      product_variant_id: selectedVariant.id,
+      quantity: quantity
     });
+    
+    toast.success(`${product.name} added to cart`);
+    
+    setSelectedSize('');
+    setSelectedColor('');
+    setQuantity(1);
   };
   
-  // If loading or error
   if (isLoading) {
     return (
       <div className="container-custom py-12 text-center">
@@ -116,7 +132,6 @@ const ProductDetailPage = () => {
     );
   }
   
-  // If product not found
   if (error || !product) {
     return (
       <div className="container-custom py-12 text-center">
@@ -131,7 +146,6 @@ const ProductDetailPage = () => {
   
   return (
     <div className="container-custom py-8">
-      {/* Breadcrumb */}
       <div className="mb-6 text-sm">
         <Link to="/" className="text-fashion-gray-800 hover:text-accent">Home</Link>
         <span className="mx-2">/</span>
@@ -143,7 +157,6 @@ const ProductDetailPage = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-        {/* Product Images */}
         <div>
           <div className="mb-4 overflow-hidden">
             <img 
@@ -170,12 +183,10 @@ const ProductDetailPage = () => {
           </div>
         </div>
         
-        {/* Product Details */}
         <div>
           <h1 className="text-2xl font-semibold mb-2">{product.name}</h1>
           <p className="text-xl mb-4">${product.price.toFixed(2)}</p>
           
-          {/* Color Selection */}
           <div className="mb-6">
             <h3 className="text-sm font-medium mb-2">
               Color: {selectedColor}
@@ -193,7 +204,6 @@ const ProductDetailPage = () => {
             </div>
           </div>
           
-          {/* Size Selection */}
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-sm font-medium">Size</h3>
@@ -216,7 +226,6 @@ const ProductDetailPage = () => {
             </div>
           </div>
           
-          {/* Quantity */}
           <div className="mb-6">
             <h3 className="text-sm font-medium mb-2">Quantity</h3>
             <div className="flex items-center border border-gray-300 rounded-md w-32">
@@ -237,7 +246,6 @@ const ProductDetailPage = () => {
             </div>
           </div>
           
-          {/* Add to Cart and Wishlist Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
             <Button
               onClick={handleAddToCart}
@@ -254,7 +262,6 @@ const ProductDetailPage = () => {
             </Button>
           </div>
           
-          {/* Shipping and Returns Info */}
           <div className="border-t border-gray-200 pt-6 space-y-4">
             <div className="flex">
               <TruckIcon className="h-5 w-5 mr-3 text-fashion-gray-800" />
@@ -275,13 +282,10 @@ const ProductDetailPage = () => {
         </div>
       </div>
       
-      {/* Product Description and Details */}
       <div className="mt-12">
         <div className="border-t border-gray-200 pt-8">
           <h2 className="text-xl font-semibold mb-4">Description</h2>
           <p className="text-fashion-gray-800 mb-8">{product.description}</p>
-          
-          {/* Additional details would go here */}
         </div>
       </div>
     </div>

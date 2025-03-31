@@ -71,10 +71,12 @@ export const useProductDetails = (productId: string) => {
         throw new Error(variantsError.message);
       }
       
-      return {
+      const result = {
         ...product,
         variants
       } as Product;
+      
+      return result;
     },
     enabled: !!productId
   });

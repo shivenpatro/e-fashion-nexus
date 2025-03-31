@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
@@ -16,8 +15,8 @@ const CheckoutPage: React.FC = () => {
   
   // Shipping information
   const [shippingInfo, setShippingInfo] = useState({
-    firstName: user?.name.split(' ')[0] || '',
-    lastName: user?.name.split(' ')[1] || '',
+    firstName: user?.user_metadata?.first_name || '',
+    lastName: user?.user_metadata?.last_name || '',
     email: user?.email || '',
     phone: '',
     address: '',
